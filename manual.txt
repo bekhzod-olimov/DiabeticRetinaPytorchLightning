@@ -1,0 +1,90 @@
+# New data training
+CUDA_VISIBLE_DEVICES=1 python main.py --root_dir /vol0/nfs9/tileimage/new/25_05_15 --data_name 25_05_15 --sample_type LBC --run_name scheduler_model_zeros_data_ones --max_epochs 100
+CUDA_VISIBLE_DEVICES=0 python main.py --root_dir /vol0/nfs9/tileimage/new/25_05_15 --data_name 25_05_15 --sample_type PAP --run_name scheduler_model_zeros_data_ones --max_epochs 100
+python main.py --root_dir /vol0/nfs9/tileimage/new/25_05_15 --data_name 25_05_15 --sample_type PAP --run_name scheduler_bbox_zeros_model_ones --max_epochs 100 --empty_bbox_type ones --metric val_recall
+python main.py --root_dir /vol0/nfs9/tileimage/new/25_05_15 --data_name 25_05_15 --sample_type LBC --run_name scheduler_bbox_zeros_model_ones --max_epochs 100 --empty_bbox_type ones --metric val_recall
+
+# Old data training
+python main.py --root_dir /home/super/Desktop/bekhzod/backup/tile_classification/25_05_09_1024 --data_name 25_05_09_1024 --sample_type LBC --run_name scheduler --max_epochs 100
+python new_main.py --root_dir /vol0/nfs9/tileimage/new/25_05_27 --data_name 25_05_27 --sample_type PAP --run_name scheduler_bbox_ones_model_ones_minimize_loss_equal_split --max_epochs 100 --empty_bbox_type ones --metric val_recall
+
+python new_main.py --root_dir /home/super/Desktop/bekhzod/backup/tile_classification/25_05_09_1024 --data_name 25_05_09 --sample_type PAP --run_name scheduler_bbox_ones_model_zeros_minimize_loss_equal_split --max_epochs 100 --empty_bbox_type ones --metric val_recall
+python new_main.py --root_dir /home/super/Desktop/bekhzod/backup/tile_classification/25_05_09_1024 --data_name 25_05_09 --sample_type LBC --run_name scheduler_bbox_ones_model_zeros_minimize_loss_equal_split --max_epochs 100 --empty_bbox_type ones --metric val_recall
+
+python new_main.py --root_dir /home/super/Desktop/bekhzod/backup/tile_classification/25_05_09_1024 --data_name 25_05_09_focal --sample_type PAP --run_name scheduler_bbox_ones_model_zeros_minimize_loss_focal_equal_split --max_epochs 100 --empty_bbox_type ones --metric val_recall
+python new_main.py --root_dir /home/super/Desktop/bekhzod/backup/tile_classification/25_05_09_1024 --data_name 25_05_09_focal --sample_type PAP --run_name scheduler_bbox_ones_model_zeros_minimize_loss_focal_equal_split --max_epochs 100 --empty_bbox_type ones --metric val_recall
+
+# position updated
+python position_updater.py --root /vol0/nfs9/tileimage/new/25_06_09 --output_json position_full.json
+python position_updater.py --root /vol0/nfs9/tileimage/new/25_06_09 --output_json test.json
+
+
+# Inference script
+CUDA_VISIBLE_DEVICES=1 python inference.py --device cuda --sample_type LBC --run_name scheduler_bbox_ones_model_ones_minimize_loss_val_new_split --data_name 25_05_27 --empty_bbox_type ones --metric val_recall --ckpt_path /home/super/Desktop/bekhzod/BinaryTileClassification/checkpoints/25_05_27/LBC/scheduler_bbox_ones_model_ones_minimize_loss_val_new_split-best-epoch=03-val_recall=0.98.ckpt
+
+CUDA_VISIBLE_DEVICES=0 python inference.py --device cuda --sample_type LBC --run_name scheduler_bbox_ones_model_zeros_minimize_loss --data_name 25_05_15 --empty_bbox_type ones --metric val_recall --save_wrong
+CUDA_VISIBLE_DEVICES=1 python inference.py --device cuda --sample_type PAP --run_name scheduler_bbox_ones_model_zeros_minimize_loss --data_name 25_05_15 --empty_bbox_type ones --metric val_recall --save_wrong
+
+# Full inference
+
+python tile_inference.py \
+--tiff_dir "/home/super/Desktop/bekhzod/backup/tile_classification/tiff_files/1st_round/PAP" \
+--results_output_dir /home/super/Desktop/bekhzod/backup/tile_classification/new_inference_results \
+--device "cuda" \
+--ckpt_path /home/super/Desktop/bekhzod/BinaryTileClassification/checkpoints/25_05_27/PAP/scheduler_bbox_ones_model_ones_minimize_loss_new_split-best-epoch=01-val_recall=0.97.ckpt \
+--save_model_path /home/super/Desktop/bekhzod/BinaryTileClassification/checkpoints \
+--save_data_path /home/super/Desktop/bekhzod/BinaryTileClassification/saved_data \
+--data_name  25_05_27 \
+--empty_bbox_type ones \
+--slide_type pap \
+--run_name scheduler_bbox_ones_model_ones_minimize_loss_new_split
+
+
+python cropper.py \
+--tiff_dir "/home/super/Desktop/bekhzod/backup/tile_classification/tiff_files/1st_round/PAP" \
+--results_output_dir /home/super/Desktop/bekhzod/backup/tile_classification/beki_inference/normal_tiff_images \
+--device "cuda" \
+--data_name  25_05_27 \
+--slide_type pap \
+--run_name scheduler_bbox_ones_model_ones_minimize_loss_new_split
+
+python cropper.py \
+--tiff_dir "/home/super/Desktop/bekhzod/backup/tile_classification/tiff_files/1st_round/LBC" \
+--results_output_dir /home/super/Desktop/bekhzod/backup/tile_classification/beki_inference/normal_tiff_images \
+--device "cuda" \
+--data_name  25_05_27 \
+--slide_type lbc \
+--run_name scheduler_bbox_ones_model_ones_minimize_loss_new_split
+
+
+CUDA_VISIBLE_DEVICES=1 python tile_inference_abnormal.py \
+--im_dir "/vol0/nfs9/tileimage/250529_inference/1024/abnormal" \
+--results_output_dir /home/super/Desktop/bekhzod/backup/tile_classification/beki_inference/ \
+--device "cuda" \
+--ckpt_path /home/super/Desktop/bekhzod/BinaryTileClassification/checkpoints/25_05_27/LBC/scheduler_bbox_ones_model_ones_minimize_loss_equal_split-best-epoch=00-val_recall=0.94.ckpt \
+--save_model_path /home/super/Desktop/bekhzod/BinaryTileClassification/checkpoints \
+--save_data_path /home/super/Desktop/bekhzod/BinaryTileClassification/saved_data \
+--data_name  25_05_27 \
+--empty_bbox_type ones \
+--slide_type lbc \
+--run_name scheduler_bbox_ones_model_ones_minimize_loss_equal_split
+
+CUDA_VISIBLE_DEVICES=0 python tile_inference_abnormal.py \
+--im_dir "/vol0/nfs9/tileimage/250529_inference/1024/abnormal" \
+--results_output_dir /home/super/Desktop/bekhzod/backup/tile_classification/beki_inference/ 
+--device "cuda" \
+--ckpt_path /home/super/Desktop/bekhzod/BinaryTileClassification/checkpoints/ \
+--save_model_path /home/super/Desktop/bekhzod/BinaryTileClassification/checkpoints \
+--save_data_path /home/super/Desktop/bekhzod/BinaryTileClassification/saved_data \
+--data_name  25_06_09_focal \
+--empty_bbox_type ones \
+--slide_type pap \
+--run_name scheduler_ones \
+--from_dir
+
+python tile_inference.py --tiff_dir "/home/super/Desktop/bekhzod/backup/tile_classification/tiff_files/1st_round/PAP" --results_output_dir /home/super/Desktop/bekhzod/backup/tile_classification/new_inference_results --device "cuda" --ckpt_path /home/super/Desktop/bekhzod/BinaryTileClassification/checkpoints/25_05_09/PAP/scheduler_bbox_ones_model_zeros_minimize_loss_equal_split-best-epoch\=12-val_recall\=0.94.ckpt --save_model_path /home/super/Desktop/bekhzod/BinaryTileClassification/checkpoints --save_data_path /home/super/Desktop/bekhzod/BinaryTileClassification/saved_data --data_name 25_05_09 --empty_bbox_type ones --slide_type pap --run_name scheduler_bbox_ones_model_zeros_minimize_loss_equal_split --from_dir
+python tile_inference.py --tiff_dir "/home/super/Desktop/bekhzod/backup/tile_classification/tiff_files/1st_round/PAP" --results_output_dir /home/super/Desktop/bekhzod/backup/tile_classification/new_inference_results --device "cuda" --ckpt_path /home/super/Desktop/bekhzod/BinaryTileClassification/checkpoints/25_06_09_focal/PAP/scheduler_equal_split_focal-best-epoch=04-val_recall=0.93.ckpt --save_model_path /home/super/Desktop/bekhzod/BinaryTileClassification/checkpoints --save_data_path /home/super/Desktop/bekhzod/BinaryTileClassification/saved_data --data_name 25_06_09_focal --empty_bbox_type ones --slide_type pap --run_name scheduler_bbox_ones_model_zeros_minimize_loss_equal_split --from_dir
+
+python full_inference_new.py --tiff_dir "/home/bekhzod/Desktop/backup/250529_inference/1024/abnormal" --results_output_dir /home/bekhzod/Desktop/backup --device "cuda" --ckpt_path /home/bekhzod/Desktop/binary_train_details/new_data/saved_models_high/LBC_scheduler_bbox_ones_model_zeros_minimize_loss_equal_split-best-epoch=03-val_recall=0.91.ckpt --slide_type lbc --run_name compare
+python full_inference_new.py --tiff_dir "/home/bekhzod/Desktop/backup/250529_inference/1024/abnormal" --results_output_dir /home/bekhzod/Desktop/backup --device "cuda" --ckpt_path /home/bekhzod/Desktop/binary_train_details/new_data/saved_models_high/LBC_scheduler_bbox_ones_model_zeros_minimize_loss_equal_split-best-epoch=03-val_recall=0.91.ckpt --slide_type pap --run_name compare
+

@@ -64,7 +64,7 @@ class TileClassificationPipeline:
         num_samples=20
         ).run()
 
-    def setup_callbacks(self):
+    def setup_callbacks(self, model_name):
         # Clear existing callbacks to avoid duplicates
         self.callbacks = []
 
@@ -72,8 +72,8 @@ class TileClassificationPipeline:
             monitor="val_loss",
             mode="min",            
             save_top_k=3,
-            dirpath=self.model_save_dir,
-            filename=f"{self.args.run_name}-best-{{epoch:02d}}-{{val_recall:.2f}}",
+            dirpath=os.path.join(self.model_save_dir, model_name),
+            filename=f"{self.args.run_name}-best-{{epoch:02d}}-{{val_acc:.2f}}",
         )
         self.callbacks.append(self.checkpoint_callback)
 
@@ -92,8 +92,8 @@ class TileClassificationPipeline:
     def setup_trainer(self):
         self.trainer = L.Trainer(
         accelerator="cuda",
-        fast_dev_run=True,
-        devices=1,
+        fast_dev_run=False,
+        devices=2,
         strategy="ddp",
         max_epochs=self.args.max_epochs,
         precision="16-mixed",
@@ -114,7 +114,7 @@ class TileClassificationPipeline:
             current_run_name = f"{self.args.run_name}_{model_name}"
 
             self.setup_model_with_name(model_name=model_name, run_name=current_run_name)
-            self.setup_callbacks()
+            self.setup_callbacks(model_name=model_name)
             self.setup_trainer()
 
             self.trainer.fit(self.model, self.dm)
@@ -156,7 +156,7 @@ class TileClassificationPipeline:
         parser.add_argument('--model_names', nargs='+', default=["ecaresnet269d", "resnet152d", "resnext101_64x4d", "rexnet_300", "vit_base_patch16_224", "swinv2_cr_small_ns_224", "convnextv2_base", "mobilenetv3_large_100", "swin_base_patch4_window7_224", "convnext_large",  "efficientnetv2_rw_m", "deit_base_patch16_224"], help='List of model names')    
         parser.add_argument('--metric', type=str, help='Metric to save best model')
         parser.add_argument('--im_size', type=int, default=224, help='Image size')
-        parser.add_argument('--batch_size', type=int, default=16, help='Batch size for training')
+        parser.add_argument('--batch_size', type=int, default=32, help='Batch size for training')
         parser.add_argument('--max_epochs', type=int, default=100, help='Maximum number of training epochs')
         parser.add_argument('--patience', type=int, default=5, help='Patience for early stopping')
         parser.add_argument('--accumulate_grad_batches', type=int, default=8, help='Number of batches for gradient accumulation')

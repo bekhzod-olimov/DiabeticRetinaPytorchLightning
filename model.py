@@ -167,7 +167,7 @@ class CellClassifier(L.LightningModule):
     def configure_optimizers(self):
         if self.run_name and "scheduler" in self.run_name:
             print("Using lr scheduler")
-            optimizer = torch.optim.AdamW(self.parameters(), lr=3e-5)
+            optimizer = torch.optim.AdamW(self.parameters(), lr=1e-4)
             lr_scheduler = {
                 "scheduler": torch.optim.lr_scheduler.ReduceLROnPlateau(
                     optimizer,

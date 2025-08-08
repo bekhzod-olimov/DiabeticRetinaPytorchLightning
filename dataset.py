@@ -75,7 +75,8 @@ class CustomDataset(Dataset):
             self.root = (
                 os.path.join(data_root_dir, "boolart-image-classification")
                 if self.data_name == "art"
-                else "/home/bekhzod/Desktop/backup/image_classification_project_datasets/diabetic_retina_new_no_tfs"
+                # else "/home/bekhzod/Desktop/backup/image_classification_project_datasets/diabetic_retina_new_no_tfs"
+                else "/home/super/Desktop/bekhzod/kaggle/diabetic_retina_new_no_tfs"
             )
             target_name = "target" if self.data_name == "art" else "diagnosis"
             id_name = "id" if self.data_name == "art" else "id_code"

@@ -72,7 +72,7 @@ class CellClassifier(L.LightningModule):
         return logits, features
 
     def training_step(self, batch, batch_idx):
-        imgs, labels = batch
+        imgs, labels, _ = batch
 
         logits, features = self(imgs)
 
@@ -103,7 +103,7 @@ class CellClassifier(L.LightningModule):
         self.last_lr = current_lr
 
     def validation_step(self, batch, batch_idx):
-        imgs, labels = batch
+        imgs, labels, _ = batch
         logits, _ = self(imgs)
         loss = self.ce_loss(logits, labels)
         acc = (logits.argmax(1) == labels).float().mean()
@@ -133,7 +133,7 @@ class CellClassifier(L.LightningModule):
         self.val_f1.reset()
 
     def test_step(self, batch, batch_idx):
-        imgs, labels = batch
+        imgs, labels, _ = batch
         logits, _ = self(imgs)
         loss = self.ce_loss(logits, labels)
         acc = (logits.argmax(1) == labels).float().mean()

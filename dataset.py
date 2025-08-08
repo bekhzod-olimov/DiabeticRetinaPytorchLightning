@@ -181,7 +181,7 @@ class CustomDataset(Dataset):
         if self.transform:
             img = self.transform(img)
 
-        return img, label, None
+        return img, label, 0
 
     @classmethod
     def stratified_split(cls, data_name, transform=None, train_ratio=0.8, val_ratio=0.1, test_ratio=0.1, random_state=42):

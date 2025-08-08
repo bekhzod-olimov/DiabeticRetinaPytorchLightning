@@ -26,7 +26,7 @@ class TileClassificationPipeline:
         self.callbacks = []
 
     def setup_datamodule(self):
-        train_tfs, eval_tfs = get_fts(mean=self.mean, std=self.std)
+        train_tfs, eval_tfs = get_fts(mean=self.mean, std=self.std, im_size=args.im_size)
 
         self.dm = CellDataModule(                        
             data_name=self.args.data_name,
@@ -92,7 +92,7 @@ class TileClassificationPipeline:
         self.trainer = L.Trainer(
             accelerator="cuda",
             fast_dev_run=True,
-            devices=2,
+            devices=1,
             strategy="ddp",
             max_epochs=self.args.max_epochs,
             precision="16-mixed",
@@ -121,7 +121,7 @@ class TileClassificationPipeline:
 
     def run(self):    
         self.setup_datamodule()
-        self.setup_visualization()
+        # self.setup_visualization()
         self.setup_model()
         self.setup_callbacks()
         self.setup_trainer()
@@ -148,6 +148,7 @@ class TileClassificationPipeline:
         parser.add_argument('--data_name', type=str, required=True, choices=['food', 'digit', 'art', 'kenya_food', 'retina', 'diabetic_retina'], help='Dataset name')        
         parser.add_argument('--run_name', type=str, required=True, help='Name for this training run')
         parser.add_argument('--metric', type=str, help='Metric to save best model')
+        parser.add_argument('--im_size', type=int, default=224, help='Image size')
         parser.add_argument('--batch_size', type=int, default=16, help='Batch size for training')
         parser.add_argument('--max_epochs', type=int, default=100, help='Maximum number of training epochs')
         parser.add_argument('--patience', type=int, default=5, help='Patience for early stopping')

@@ -4,9 +4,9 @@ from PIL import Image, ImageDraw
 from torchvision import transforms as T
 
 class DatasetVisualizer:
-    def __init__(self, train, val, test, run_name, data_name, save_dir, splits=['train', 'val', 'test'], num_samples=20):        
+    def __init__(self, train, val, run_name, data_name, save_dir, splits=['train', 'val'], num_samples=20):        
         
-        self.train, self.val, self.test = train, val, test
+        self.train, self.val = train, val
         self.save_dir = save_dir
         self.run_name, self.data_name = run_name, data_name 
         self.splits = splits
@@ -14,8 +14,7 @@ class DatasetVisualizer:
         os.makedirs(self.save_dir, exist_ok = True)        
         self.datasets = {
                 self.splits[0]: self.train.dataset,
-                self.splits[1]: self.val.dataset,
-                self.splits[2]: self.test.dataset
+                self.splits[1]: self.val.dataset,                
             }
         self.colors = ["darkorange", "seagreen", "salmon"]
 

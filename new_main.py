@@ -28,41 +28,38 @@ class TileClassificationPipeline:
     def setup_datamodule(self):
         train_tfs, eval_tfs = get_fts(mean=self.mean, std=self.std, im_size=args.im_size)
 
-
         self.dm = CellDataModule(
-        data_name=self.args.data_name,
-        batch_size=self.args.batch_size,
-        train_transform=train_tfs,
-        eval_transform=eval_tfs,
-        num_workers=4,
-        persistent_workers=True,
-        )
+            data_name=self.args.data_name,
+            batch_size=self.args.batch_size,
+            train_transform=train_tfs,
+            eval_transform=eval_tfs,
+            num_workers=4,
+            persistent_workers=True,
+            )
         self.dm.setup()
 
         self.class_counts = self.dm.train_dataset.class_counts
         self.class_names = self.dm.train_dataset.class_names
 
-
+        ts_ds_im_paths = self.dm.test_dataset.im_paths
+        torch.save(obj=ts_ds_im_paths, f=f"{self.save_data_dir}/{self.args.data_name}_ts_ds_im_paths.pt")
+        
         with open(f"{self.save_data_dir}/{self.args.data_name}_class_names.pkl", "wb") as f:
             pickle.dump(self.class_names, f)
         with open(f"{self.save_data_dir}/{self.args.data_name}_class_counts.pkl", "wb") as f:
             pickle.dump(self.class_counts, f)
 
 
-    def setup_visualization(self):
-        test_loader = self.dm.test_dataloader()
-        torch.save(obj=test_loader, f=f"{self.save_data_dir}/{self.args.data_name}_test_dl.pth")
-
+    def setup_visualization(self):        
 
         DatasetVisualizer(
-        train=self.dm.train_dataloader(),
-        val=self.dm.val_dataloader(),
-        test=test_loader,
-        data_name=self.args.data_name,
-        run_name=self.args.run_name,
-        save_dir="vis",
-        num_samples=20
-        ).run()
+            train=self.dm.train_dataloader(),
+            val=self.dm.val_dataloader(),            
+            data_name=self.args.data_name,
+            run_name=self.args.run_name,
+            save_dir="vis",
+            num_samples=20
+            ).run()
 
     def setup_callbacks(self, model_name):
         # Clear existing callbacks to avoid duplicates
@@ -96,7 +93,8 @@ class TileClassificationPipeline:
         devices=2,
         strategy="ddp",
         max_epochs=self.args.max_epochs,
-        precision="16-mixed",
+        # precision="16-mixed",
+        precision="32-true",        
         accumulate_grad_batches=self.args.accumulate_grad_batches,
         callbacks=self.callbacks
         )

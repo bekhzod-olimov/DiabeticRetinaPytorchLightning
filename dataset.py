@@ -185,30 +185,21 @@ class CustomDataset(Dataset):
         return img, label, 0
 
     @classmethod
-    def stratified_split(cls, data_name, transform=None, train_ratio=0.8, val_ratio=0.1, test_ratio=0.1, random_state=42):
+    def stratified_split(cls, data_name, train_transform=None, eval_transform = None, train_ratio=0.8, val_ratio=0.2, random_state=42):
         
-        full_dataset = cls(data_name=data_name, transform=transform)
+        full_dataset = cls(data_name=data_name, transform=eval_transform)
 
-        train_paths, temp_paths, train_labels, temp_labels = train_test_split(
+        train_paths, val_paths, train_labels, val_labels = train_test_split(
             full_dataset.image_paths,
             full_dataset.labels,
             stratify=full_dataset.labels,
             test_size=1 - train_ratio,
             random_state=random_state,
-        )
-
-        val_rel_ratio = val_ratio / (val_ratio + test_ratio)
-        val_paths, test_paths, val_labels, test_labels = train_test_split(
-            temp_paths,
-            temp_labels,
-            stratify=temp_labels,
-            test_size=1 - val_rel_ratio,
-            random_state=random_state,
-        )
+        )        
 
         train_dataset = cls(            
             data_name=data_name,
-            transform=transform,
+            transform=train_transform,
             image_paths=train_paths,
             labels=train_labels,
             class_names=full_dataset.class_names,
@@ -216,22 +207,43 @@ class CustomDataset(Dataset):
 
         val_dataset = cls(
                         data_name=data_name,
-            transform=transform,
+            transform=eval_transform,
             image_paths=val_paths,
             labels=val_labels,
             class_names=full_dataset.class_names,
         )
 
-        test_dataset = cls(            
-            data_name=data_name,
-            transform=transform,
-            image_paths=test_paths,
-            labels=test_labels,
-            class_names=full_dataset.class_names,
-        )
+        if data_name == "food": test_im_paths = glob(f"{train_dataset.root}/test_images/*.jpg")    
+        elif data_name == "art": test_im_paths = glob(f"{train_dataset.root}/test_image/*.jpg")
+        elif data_name == "diabetic_retina": print(train_dataset.root); test_im_paths = glob(f"{train_dataset.root}/test/*.png")
+        elif data_name == "retina": test_im_paths = glob(f"{train_dataset.root}/retina-test/*.jpeg")
+        elif data_name == "digit":
+            meta_data = pd.read_csv(f"{train_dataset.root}/test.csv")
+            test_im_paths = meta_data.values.astype("uint8")            
+        elif data_name == "kenya_food":
+            test_im_paths = train_dataset.test_im_paths
+        
+        class CustomTestDataset(Dataset):
+
+            def __init__(self, im_paths, transformations):
+                self.im_paths = im_paths
+                self.transformations = transformations
+            
+            def __len__(self): return len(self.im_paths)
+            
+            def __getitem__(self, idx):
+                im_path = self.im_paths[idx]
+                if data_name in ["food", "art", "diabetic_retina", "kenya_food", "retina"]:
+                    im = Image.open(im_path).convert("RGB")
+                elif data_name == "digit":
+                    im = Image.fromarray(self.im_paths[idx].reshape(28, 28), mode="L").convert("RGB")
+                if self.transformations:
+                    im = self.transformations(im)
+                return {"im_path": im_path, "im": im}
+            
+        test_dataset = CustomTestDataset(test_im_paths, eval_transform)
 
         return train_dataset, val_dataset, test_dataset
-
 
 class CellDataModule(L.LightningDataModule):
     def __init__(
@@ -276,7 +288,8 @@ class CellDataModule(L.LightningDataModule):
     def setup(self, stage=None):
         self.train_dataset, self.val_dataset, self.test_dataset = CustomDataset.stratified_split(            
             data_name=self.data_name,
-            transform=self.train_transform,
+            train_transform=self.train_transform,
+            eval_transform=self.eval_transform
         )
         self.class_names = self.train_dataset.class_names
         print(f"There are {len(self.train_dataset)} images in train dataset")
@@ -284,14 +297,10 @@ class CellDataModule(L.LightningDataModule):
         print(f"There are {len(self.test_dataset)} images in test dataset\n")
 
         if self.eval_transform:
-            self.val_dataset.transform = self.eval_transform
-            self.test_dataset.transform = self.eval_transform
+            self.val_dataset.transform = self.eval_transform            
 
     def train_dataloader(self):
         return self._create_dataloader(self.train_dataset)
 
     def val_dataloader(self):
-        return self._create_dataloader(self.val_dataset)
-
-    def test_dataloader(self):
-        return self._create_dataloader(self.test_dataset)
+        return self._create_dataloader(self.val_dataset)   

@@ -93,8 +93,8 @@ class TileClassificationPipeline:
         devices=2,
         strategy="ddp",
         max_epochs=self.args.max_epochs,
-        # precision="16-mixed",
-        precision="32-true",        
+        precision="16-mixed",
+        # precision="32-true",        
         accumulate_grad_batches=self.args.accumulate_grad_batches,
         callbacks=self.callbacks
         )
@@ -134,10 +134,10 @@ class TileClassificationPipeline:
 
     def setup_model_with_name(self, model_name, run_name):
         self.model = CellClassifier(
+            model_name=model_name, 
             run_name=run_name,
             class_counts=self.class_counts,
-            num_classes=len(self.class_names),
-            # optionally pass model_name to your model if supported
+            num_classes=len(self.class_names),            
         )
 
     # Modify setup_model to raise an error or delegate to the above, so you avoid redundancy

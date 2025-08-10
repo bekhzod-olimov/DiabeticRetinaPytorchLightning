@@ -1,6 +1,6 @@
 import argparse
-from utils import get_dls
-from transformations import get_tfs
+from dataset import CellDataModule
+from transformations import get_fts
 from inference import InferenceEnsemble
 
 def parse_args():
@@ -15,7 +15,8 @@ def parse_args():
     parser.add_argument('--run_name', type=str, default='triplet', help='Run name')
     parser.add_argument('--device', type=str, default='cuda', help='Device to use')
     parser.add_argument('--epochs', type=int, default=50, help='Number of epochs')            
-    parser.add_argument('--save_dir', type=str, default='/home/bekhzod/Desktop/backup/kaggle/saved_models', help='Directory to save models')
+    # parser.add_argument('--save_dir', type=str, default='/home/bekhzod/Desktop/backup/kaggle/saved_models', help='Directory to save models')
+    parser.add_argument('--save_dir', type=str, default='checkpoints', help='Directory to save models')
     parser.add_argument('--embeddings_dir', type=str, default='/home/bekhzod/Desktop/backup/kaggle/embeddings_224', help='Directory to save embeddings')    
     # parser.add_argument('--model_names', nargs='+', default=["ecaresnet101d", "resnet101", "resnext101_32x8d", "rexnet_200", "vit_large_patch16_224", "swin_large_patch4_window7_224"], help='List of model names')    
     # parser.add_argument('--model_names', nargs='+', default=["ecaresnet101d", "resnet101", "resnext101_32x8d", "rexnet_200", "vit_large_patch16_224", "convnext_large",  "coatnet_0_rw_224.sw_in1k", "eva02_base_patch14_224"], help='List of model names')    
@@ -40,16 +41,24 @@ def parse_args():
 def main():
     args = parse_args()
 
-    tr_tfs, ts_tfs = get_tfs(im_size=args.im_size)
-    tr_dl, val_dl, ts_dl, classes, _ = get_dls(        
-        embeddings_dir = args.embeddings_dir,
-        train_transformations=tr_tfs,
-        test_transformations=ts_tfs,
+    mean = [0.485, 0.456, 0.406]
+    std = [0.229, 0.224, 0.225]
+    train_tfs, eval_tfs = get_fts(im_size=args.im_size, mean=mean, std=std)
+
+    dm = CellDataModule(
         data_name=args.data_name,
-        bs=args.bs
-    )
-    print(f"There are {len(tr_dl)}  batches in train dataloader.")
-    print(f"There are {len(val_dl)} batches in valid dataloader.")
+        batch_size=args.bs,
+        train_transform=train_tfs,
+        eval_transform=eval_tfs,
+        num_workers=4,
+        persistent_workers=True,
+        )
+    dm.setup()
+    
+    ts_dl = dm.test_dataloader()
+    
+    classes = dm.train_dataset.class_names
+    
     print(f"There are {len(ts_dl)}  batches in test  dataloader.")
     print(f"Class names -> {classes}")
 

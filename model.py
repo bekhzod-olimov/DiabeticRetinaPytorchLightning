@@ -1,42 +1,19 @@
 from attention import HybridAttention
 from utils import FocalLoss
-import torch
+import torch, timm
 import torch.nn.functional as F
 from pytorch_metric_learning import losses, miners
 import pytorch_lightning as L
 from torchmetrics.classification import MulticlassPrecision, MulticlassRecall, MulticlassSpecificity, MulticlassF1Score
 
-
-class CustomEncoder(torch.nn.Module):
-    def __init__(self, backbone="resnet50"):
-        super().__init__()
-        resnet = torch.hub.load('pytorch/vision', backbone, pretrained=True)
-        self.feature_extractor = torch.nn.Sequential(
-            resnet.conv1,
-            resnet.bn1,
-            resnet.relu,
-            resnet.maxpool,
-            resnet.layer1,
-            resnet.layer2,
-            resnet.layer3,
-            resnet.layer4
-        )
-        self.hybrid_att = HybridAttention(in_channels=2048)  # Attention after feature extraction
-
-    def forward(self, x):
-        features = self.feature_extractor(x)  # [B, 2048, H, W]
-        att_features = self.hybrid_att(features)
-        return att_features
-
-
 class CellClassifier(L.LightningModule):
-    def __init__(self, class_counts, num_classes=2, run_name=None, backbone="resnet50", feature_dim=2048):
+    def __init__(self, model_name, class_counts, num_classes=2, run_name=None):
         super().__init__()
 
-        # Image encoder
-        self.encoder = CustomEncoder(backbone=backbone)
+        self.model_name = model_name
         self.num_classes = num_classes
         self.run_name = run_name
+        self.model = timm.create_model(model_name=self.model_name, pretrained=True, num_classes=self.num_classes)        
 
         # Validation metrics
         self.val_precision = MulticlassPrecision(num_classes=num_classes, average='macro')
@@ -48,15 +25,7 @@ class CellClassifier(L.LightningModule):
         self.test_precision = MulticlassPrecision(num_classes=num_classes, average='macro')
         self.test_recall = MulticlassRecall(num_classes=num_classes, average='macro')
         self.test_specificity = MulticlassSpecificity(num_classes=num_classes, average='macro')
-        self.test_f1 = MulticlassF1Score(num_classes=num_classes, average='macro')
-
-        # Classification head (optional small MLP before classifier)
-        self.classifier_head = torch.nn.Sequential(
-            torch.nn.Linear(feature_dim, 512),
-            torch.nn.ReLU(),
-            torch.nn.Dropout(0.2),
-            torch.nn.Linear(512, num_classes)
-        )
+        self.test_f1 = MulticlassF1Score(num_classes=num_classes, average='macro')        
 
         # Loss and metric learning components
         self.miner = miners.MultiSimilarityMiner()
@@ -65,11 +34,15 @@ class CellClassifier(L.LightningModule):
 
         self.save_hyperparameters()
 
+    def get_fms(self, fts): return fts[:, 0] if ("vit" in self.model_name or "eva" in self.model_name or "deit" in self.model_name) else torch.nn.functional.avg_pool2d(fts, kernel_size=(fts.shape[2], fts.shape[3])).squeeze(-1).squeeze(-1)
+
     def forward(self, x):
-        features = self.encoder(x)  # [B, 2048, H, W]
-        features = features.mean(dim=[2, 3])  # Global Average Pooling to [B, 2048]
-        logits = self.classifier_head(features)
-        return logits, features
+        
+        features = self.model.forward_features(x)
+        squeezed_features = self.get_fms(features)
+        logits = self.model.forward_head(features)
+
+        return logits, squeezed_features
 
     def training_step(self, batch, batch_idx):
         imgs, labels, _ = batch
@@ -164,24 +137,20 @@ class CellClassifier(L.LightningModule):
         self.test_specificity.reset()
         self.test_f1.reset()
 
-    def configure_optimizers(self):
-        if self.run_name and "scheduler" in self.run_name:
-            print("Using lr scheduler")
-            optimizer = torch.optim.AdamW(self.parameters(), lr=1e-4)
-            lr_scheduler = {
-                "scheduler": torch.optim.lr_scheduler.ReduceLROnPlateau(
-                    optimizer,
-                    mode='min',
-                    factor=0.1,
-                    patience=3,
-                    threshold=0.01,
-                    threshold_mode='rel'
-                ),
-                "monitor": "val_loss",
-                "interval": "epoch",
-                "frequency": 1
-            }
-            return [optimizer], [lr_scheduler]
-        else:
-            print("Not using lr scheduler")
-            return torch.optim.AdamW(self.parameters(), lr=3e-5)
+    def configure_optimizers(self):        
+            
+        optimizer = torch.optim.AdamW(self.parameters(), lr=1e-4)
+        lr_scheduler = {
+            "scheduler": torch.optim.lr_scheduler.ReduceLROnPlateau(
+                optimizer,
+                mode='min',
+                factor=0.1,
+                patience=3,
+                threshold=0.01,
+                threshold_mode='rel'
+            ),
+            "monitor": "val_loss",
+            "interval": "epoch",
+            "frequency": 1
+        }
+        return [optimizer], [lr_scheduler]    

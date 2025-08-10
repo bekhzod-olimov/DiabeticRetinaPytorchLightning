@@ -304,3 +304,6 @@ class CellDataModule(L.LightningDataModule):
 
     def val_dataloader(self):
         return self._create_dataloader(self.val_dataset)   
+    
+    def test_dataloader(self):
+        return self._create_dataloader(self.test_dataset)   

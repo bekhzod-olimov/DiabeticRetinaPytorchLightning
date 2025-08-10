@@ -2,7 +2,8 @@ import pickle
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-import os, timm, torch
+import os, torch
+from model import CellClassifier
 # from pytorch_grad_cam import GradCAM
 from torchvision import transforms as T
 # from pytorch_grad_cam.utils.image import show_cam_on_image
@@ -28,12 +29,37 @@ class InferenceEnsemble:
         invTrans = gray_tfs if t_type == "gray" else rgb_tfs
         return (invTrans(t) * 255).detach().squeeze().cpu().permute(1, 2, 0).numpy().astype(np.uint8)
 
+    def get_best_ckpt(self, ckpt_list):
+        
+        best_acc = -float('inf')
+        best_ckpt = None
+        
+        for ckpt in ckpt_list:            
+            # Extract the val_acc value from the filename
+            import re
+            match = re.search(r"val_acc=(\d+\.\d+)", ckpt)
+            if match:
+                acc = float(match.group(1))
+                if acc > best_acc:
+                    best_acc = acc
+                    best_ckpt = ckpt
+                    
+        return best_ckpt
+    
     def load_models(self):
 
         self.models = []
         for model_name in self.model_names:
-            model = timm.create_model(model_name, num_classes = len(self.cls_names))
-            model.load_state_dict(torch.load(f"{self.save_dir}/{model_name}/{self.data_name}_{self.run_name}_{model_name}_best_model.pth", weights_only=True, map_location="cpu"))
+            model = self.model = CellClassifier(
+                model_name=model_name, 
+                run_name=self.run_name,
+                class_counts=None,
+                num_classes=len(self.cls_names),            
+            )            
+            from glob import glob
+            ckpt_name = self.get_best_ckpt(glob(f"{os.path.join(self.save_dir, self.data_name, model_name)}/*.ckpt"))            
+            model.load_state_dict(torch.load(ckpt_name, weights_only=True, map_location="cpu")["state_dict"])
+            # model.load_state_dict(torch.load(f"{self.save_dir}/{model_name}/{self.data_name}_{self.run_name}_{model_name}_best_model.pth", weights_only=True, map_location="cpu"))
             self.models.append(model.eval().to(self.device))
     
     def save_submission(self, im_paths, preds, submission_path):

@@ -31,6 +31,7 @@ class InferenceEnsemble:
 
     def get_best_ckpt(self, ckpt_list):
         
+        ckpt_list = [ckpt for ckpt in ckpt_list if self.run_name in ckpt]
         best_acc = -float('inf')
         best_ckpt = None
         
@@ -57,7 +58,8 @@ class InferenceEnsemble:
                 num_classes=len(self.cls_names),            
             )            
             from glob import glob
-            ckpt_name = self.get_best_ckpt(glob(f"{os.path.join(self.save_dir, self.data_name, model_name)}/*.ckpt"))            
+            ckpt_name = self.get_best_ckpt(glob(f"{os.path.join(self.save_dir, self.data_name, model_name)}/*.ckpt"))
+            print(ckpt_name)
             model.load_state_dict(torch.load(ckpt_name, weights_only=True, map_location="cpu")["state_dict"])
             # model.load_state_dict(torch.load(f"{self.save_dir}/{model_name}/{self.data_name}_{self.run_name}_{model_name}_best_model.pth", weights_only=True, map_location="cpu"))
             self.models.append(model.eval().to(self.device))

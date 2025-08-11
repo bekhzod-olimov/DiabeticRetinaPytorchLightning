@@ -93,9 +93,9 @@ class TileClassificationPipeline:
         devices=2,
         strategy="ddp",
         max_epochs=self.args.max_epochs,
-        precision="16-mixed",
-        # precision="32-true",        
-        accumulate_grad_batches=self.args.accumulate_grad_batches,
+        # precision="16-mixed",
+        precision="32-true",        
+        accumulate_grad_batches=self.args.batch_size,
         callbacks=self.callbacks
         )
     
@@ -156,8 +156,7 @@ class TileClassificationPipeline:
         parser.add_argument('--im_size', type=int, default=224, help='Image size')
         parser.add_argument('--batch_size', type=int, default=32, help='Batch size for training')
         parser.add_argument('--max_epochs', type=int, default=100, help='Maximum number of training epochs')
-        parser.add_argument('--patience', type=int, default=5, help='Patience for early stopping')
-        parser.add_argument('--accumulate_grad_batches', type=int, default=8, help='Number of batches for gradient accumulation')
+        parser.add_argument('--patience', type=int, default=5, help='Patience for early stopping')        
         return parser.parse_args()
 
 if __name__ == "__main__":    

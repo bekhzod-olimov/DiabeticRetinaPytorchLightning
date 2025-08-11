@@ -270,13 +270,13 @@ class CellDataModule(L.LightningDataModule):
         np.random.seed(worker_seed)
         random.seed(worker_seed)
 
-    def _create_dataloader(self, dataset):
+    def _create_dataloader(self, dataset, data_type):
         generator = torch.Generator()
         generator.manual_seed(self.seed)
-
+        bs = 1 if data_type == "test" else self.batch_size
         return DataLoader(
             dataset,
-            batch_size=self.batch_size,
+            batch_size=bs,
             shuffle=(dataset == self.train_dataset),
             num_workers=self.num_workers,
             worker_init_fn=self._seed_worker,
@@ -300,10 +300,10 @@ class CellDataModule(L.LightningDataModule):
             self.val_dataset.transform = self.eval_transform            
 
     def train_dataloader(self):
-        return self._create_dataloader(self.train_dataset)
+        return self._create_dataloader(self.train_dataset, data_type = "train")
 
     def val_dataloader(self):
-        return self._create_dataloader(self.val_dataset)   
+        return self._create_dataloader(self.val_dataset, data_type = "train")   
     
     def test_dataloader(self):
-        return self._create_dataloader(self.test_dataset)   
+        return self._create_dataloader(self.test_dataset, data_type = "test")   
